@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { requireUser, signOut } from "@/lib/auth";
+import { Providers } from "@/components/providers";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -63,7 +64,9 @@ export default async function AppLayout({
           </form>
         </div>
       </aside>
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="flex flex-1 flex-col">
+        <Providers>{children}</Providers>
+      </main>
     </div>
   );
 }

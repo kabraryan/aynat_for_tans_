@@ -16,6 +16,19 @@ model User {
   timezone      String    @default("Asia/Kolkata") // IANA render timezone; storage is UTC
   accounts      Account[]
   sessions      Session[]
+  courses       Course[]
+}
+
+model Course {
+  id     String  @id @default(cuid())
+  userId String
+  name   String
+  code   String?
+  color  String // hex, from the curated palette in src/lib/colors.ts
+  term   String? // plain string — no Term entity in v1
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Auth.js standard models. Account also holds the Google refresh/access
