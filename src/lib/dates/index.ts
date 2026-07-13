@@ -27,6 +27,14 @@ export function fromWallTime(
   return new Date(zoned.getTime());
 }
 
+/** Human label for a due date: "Tue, Jul 14" or "Tue, Jul 14 · 09:00". */
+export function formatDueLabel(dueAt: Date, allDay: boolean, tz: string): string {
+  const zoned = new TZDate(dueAt, tz);
+  return allDay
+    ? format(zoned, "EEE, MMM d")
+    : format(zoned, "EEE, MMM d · HH:mm");
+}
+
 export type DueGroup = "overdue" | "today" | "thisWeek" | "later" | "none";
 
 /**

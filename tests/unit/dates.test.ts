@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { userDayKey, fromWallTime, dueGroup } from "@/lib/dates";
+import { userDayKey, fromWallTime, dueGroup, formatDueLabel } from "@/lib/dates";
 
 const IST = "Asia/Kolkata";
 const NY = "America/New_York";
@@ -85,5 +85,20 @@ describe("dueGroup", () => {
   it("on a Sunday, tomorrow belongs to later (new week)", () => {
     const sunday = new Date("2026-07-19T10:00:00Z"); // Sunday 15:30 IST
     expect(dueGroup(new Date("2026-07-20T10:00:00Z"), sunday, IST)).toBe("later");
+  });
+});
+
+describe("formatDueLabel", () => {
+  it("renders all-day dues as a date only, in the user tz", () => {
+    // stored as IST midnight = 18:30Z previous day
+    expect(formatDueLabel(new Date("2026-07-13T18:30:00Z"), true, IST)).toBe(
+      "Tue, Jul 14",
+    );
+  });
+
+  it("renders timed dues with the local time", () => {
+    expect(formatDueLabel(new Date("2026-07-14T03:30:00Z"), false, IST)).toBe(
+      "Tue, Jul 14 · 09:00",
+    );
   });
 });

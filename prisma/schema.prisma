@@ -7,6 +7,17 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  TODO
+  DONE
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -17,6 +28,28 @@ model User {
   accounts      Account[]
   sessions      Session[]
   courses       Course[]
+  tasks         Task[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  userId      String
+  courseId    String?
+  title       String
+  notes       String?
+  dueAt       DateTime? // UTC
+  allDayDue   Boolean    @default(false)
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(TODO)
+  sortOrder   Int        @default(0)
+  sourceId    String? // provenance; only proposal acceptance sets this (Phase 2)
+  createdAt   DateTime   @default(now())
+  completedAt DateTime?
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, dueAt])
+  @@index([userId, courseId])
 }
 
 model Course {
@@ -27,6 +60,7 @@ model Course {
   color  String // hex, from the curated palette in src/lib/colors.ts
   term   String? // plain string — no Term entity in v1
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  Task[]
 
   @@index([userId])
 }
