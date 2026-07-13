@@ -42,3 +42,6 @@ next-env.d.ts
 
 # app
 /storage
+
+/src/generated/prisma
+/src/generated
