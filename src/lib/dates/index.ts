@@ -27,6 +27,14 @@ export function fromWallTime(
   return new Date(zoned.getTime());
 }
 
+/**
+ * Naive wall-clock string ("yyyy-MM-ddTHH:mm:ss") of an instant in the user
+ * tz — the shape FullCalendar consumes so all tz math stays in this module.
+ */
+export function toWallString(instant: Date, tz: string): string {
+  return format(new TZDate(instant, tz), "yyyy-MM-dd'T'HH:mm:ss");
+}
+
 /** Human label for a due date: "Tue, Jul 14" or "Tue, Jul 14 · 09:00". */
 export function formatDueLabel(dueAt: Date, allDay: boolean, tz: string): string {
   const zoned = new TZDate(dueAt, tz);

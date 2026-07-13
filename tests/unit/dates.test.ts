@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { userDayKey, fromWallTime, dueGroup, formatDueLabel } from "@/lib/dates";
+import { userDayKey, fromWallTime, dueGroup, formatDueLabel, toWallString } from "@/lib/dates";
 
 const IST = "Asia/Kolkata";
 const NY = "America/New_York";
@@ -100,5 +100,18 @@ describe("formatDueLabel", () => {
     expect(formatDueLabel(new Date("2026-07-14T03:30:00Z"), false, IST)).toBe(
       "Tue, Jul 14 · 09:00",
     );
+  });
+});
+
+describe("toWallString", () => {
+  it("renders a UTC instant as a naive wall-clock string in the user tz", () => {
+    expect(toWallString(new Date("2026-07-14T03:30:00Z"), IST)).toBe(
+      "2026-07-14T09:00:00",
+    );
+  });
+
+  it("round-trips with fromWallTime", () => {
+    const instant = fromWallTime("2026-09-01", "14:30", IST);
+    expect(toWallString(instant, IST)).toBe("2026-09-01T14:30:00");
   });
 });

@@ -41,3 +41,38 @@ export const taskReorderSchema = z.object({
 
 export type TaskCreate = z.infer<typeof taskCreateSchema>;
 export type TaskUpdate = z.infer<typeof taskUpdateSchema>;
+
+/** Event inputs — same rule: no `sourceId` (gate, §10.1). */
+export const eventCreateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    startAt: z.iso.datetime(),
+    endAt: z.iso.datetime(),
+    allDay: z.boolean().default(false),
+    courseId: z.string().nullish(),
+    location: z.string().trim().max(200).nullish(),
+    notes: z.string().trim().max(2000).nullish(),
+  })
+  .refine((e) => new Date(e.endAt) >= new Date(e.startAt), {
+    message: "endAt must not precede startAt",
+    path: ["endAt"],
+  });
+
+export const eventUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    startAt: z.iso.datetime(),
+    endAt: z.iso.datetime(),
+    allDay: z.boolean(),
+    courseId: z.string().nullish(),
+    location: z.string().trim().max(200).nullish(),
+    notes: z.string().trim().max(2000).nullish(),
+  })
+  .partial()
+  .refine(
+    (e) => !e.startAt || !e.endAt || new Date(e.endAt) >= new Date(e.startAt),
+    { message: "endAt must not precede startAt", path: ["endAt"] },
+  );
+
+export type EventCreate = z.infer<typeof eventCreateSchema>;
+export type EventUpdate = z.infer<typeof eventUpdateSchema>;

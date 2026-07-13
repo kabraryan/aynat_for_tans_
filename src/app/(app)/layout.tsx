@@ -64,9 +64,23 @@ export default async function AppLayout({
           </form>
         </div>
       </aside>
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col pb-14 sm:pb-0">
         <Providers>{children}</Providers>
       </main>
+      {/* bottom tab bar on phones; sidebar covers >= sm */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-panel sm:hidden">
+        {nav
+          .filter((item) => item.href !== "/")
+          .map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex-1 py-3.5 text-center text-xs font-medium text-ink-muted"
+            >
+              {item.label}
+            </Link>
+          ))}
+      </nav>
     </div>
   );
 }

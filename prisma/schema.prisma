@@ -29,6 +29,24 @@ model User {
   sessions      Session[]
   courses       Course[]
   tasks         Task[]
+  events        Event[]
+}
+
+model Event {
+  id       String   @id @default(cuid())
+  userId   String
+  courseId String?
+  title    String
+  startAt  DateTime // UTC
+  endAt    DateTime // UTC
+  allDay   Boolean  @default(false)
+  location String?
+  notes    String?
+  sourceId String? // provenance; only proposal acceptance sets this (Phase 2)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startAt])
 }
 
 model Task {
@@ -61,6 +79,7 @@ model Course {
   term   String? // plain string — no Term entity in v1
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks  Task[]
+  events Event[]
 
   @@index([userId])
 }
