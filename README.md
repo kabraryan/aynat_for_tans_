@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aynat — Student Planner
 
-## Getting Started
+Personal planner: calendar + tasks, "dump anything" LLM extraction
+(screenshots/PDFs → reviewed proposals), and read-only Gmail sync.
+Spec: [aynat_spec.md](aynat_spec.md) · Implementation plan: [docs/PLAN.md](docs/PLAN.md)
 
-First, run the development server:
+## Stack
+
+Next.js (App Router) · TypeScript · Tailwind 4 · Prisma 7 + Postgres 16 ·
+Auth.js v5 (Google) · TanStack Query · FullCalendar · dnd-kit · Zod ·
+Anthropic Messages API (Phase 2+)
+
+## Dev setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up -d          # Postgres 16 (Docker via Colima on this machine)
+cp .env.example .env          # fill AUTH_GOOGLE_ID/SECRET, AUTH_SECRET, etc.
+pnpm install                  # also runs prisma generate
+pnpm prisma migrate dev       # apply migrations
+pnpm dev                      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Google OAuth client (consent screen in *Testing* mode) needs redirect URI
+`http://localhost:3000/api/auth/callback/google`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | What |
+|---|---|
+| `pnpm dev` | dev server (port 3000 — pinned; OAuth redirect URI depends on it) |
+| `pnpm typecheck` / `pnpm lint` / `pnpm test` | the CI trio |
+| `pnpm prisma migrate dev` | create/apply migrations |
+| `pnpm format` | prettier |
 
-## Learn More
+## Gotchas
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Restart `pnpm dev` after any schema change.** The Prisma client singleton
+  is cached on `globalThis` and survives hot reload — stale clients throw
+  `Cannot read properties of undefined (reading 'findMany')` on new models.
+- All timezone logic lives in `src/lib/dates/` — UTC in the DB, the user's
+  IANA timezone (default `Asia/Kolkata`) at the edges. Don't do date math
+  elsewhere.
+- The proposal gate (spec §10.1): manual CRUD never accepts `sourceId`;
+  only proposal acceptance (Phase 2, `src/lib/proposals.ts`) sets it.
