@@ -15,6 +15,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
+  events: {
+    // Auth.js only writes Account tokens at first link. Incremental consent
+    // (Connect Gmail) re-authenticates with wider scopes — persist the fresh
+    // tokens/scope so the Gmail client can use them.
+    async signIn({ account }) {
+      if (!account || account.provider !== "google") return;
+      await db.account.updateMany({
+        where: {
+          provider: account.provider,
+          providerAccountId: account.providerAccountId,
+        },
+        data: {
+          access_token: account.access_token ?? undefined,
+          expires_at: account.expires_at ?? undefined,
+          scope: account.scope ?? undefined,
+          // absent unless prompt=consent — never overwrite with null
+          ...(account.refresh_token ? { refresh_token: account.refresh_token } : {}),
+        },
+      });
+    },
+  },
 });
 
 /** Page-side guard: returns the signed-in user or redirects to /signin. */

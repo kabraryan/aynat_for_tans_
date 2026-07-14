@@ -65,9 +65,14 @@ async function runSource(
     timezone: tz,
   });
 
-  if (source.type !== "UPLOAD" || !source.fileKey) {
-    // EMAIL sources (Phase 4): the body text travels on the source itself.
+  if (!source.fileKey) {
     return runValidated(backend, { prompt, text: source.excerpt ?? "" });
+  }
+
+  // EMAIL sources store the full message text via the storage adapter.
+  if (source.mimeType === "text/plain") {
+    const text = (await storage.get(source.fileKey)).toString("utf8");
+    return runValidated(backend, { prompt, text });
   }
 
   // Large PDFs (syllabus mode, spec 6.4): chunk, extract sequentially, merge.

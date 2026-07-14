@@ -54,6 +54,14 @@ model User {
   events        Event[]
   sources       Source[]
   proposals     Proposal[]
+  gmailSync     GmailSyncState?
+}
+
+model GmailSyncState {
+  userId     String    @id
+  lastSyncAt DateTime?
+  historyId  String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Source {
