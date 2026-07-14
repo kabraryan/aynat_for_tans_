@@ -18,6 +18,28 @@ enum TaskStatus {
   DONE
 }
 
+enum SourceType {
+  UPLOAD
+  EMAIL
+}
+
+enum SourceStatus {
+  PENDING
+  EXTRACTED
+  FAILED
+}
+
+enum ProposalKind {
+  TASK
+  EVENT
+}
+
+enum ProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -30,6 +52,54 @@ model User {
   courses       Course[]
   tasks         Task[]
   events        Event[]
+  sources       Source[]
+  proposals     Proposal[]
+}
+
+model Source {
+  id             String       @id @default(cuid())
+  userId         String
+  type           SourceType
+  fileKey        String? // storage adapter key (UPLOAD)
+  mimeType       String?
+  originalName   String?
+  gmailMessageId String? // (EMAIL, Phase 4)
+  excerpt        String? // first ~500 chars for display
+  status         SourceStatus @default(PENDING)
+  error          String?
+  createdAt      DateTime     @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  proposals Proposal[]
+  tasks     Task[]
+  events    Event[]
+
+  @@unique([userId, gmailMessageId])
+  @@index([userId, status])
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  userId      String
+  sourceId    String
+  kind        ProposalKind
+  payload     Json // validated ExtractedItem (spec §7)
+  payloadHash String // sha256 of normalized payload — re-extract dedupe
+  confidence  Float
+  status      ProposalStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  resolvedAt  DateTime?
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([sourceId, status])
+}
+
+model ExtractionCache {
+  contentHash String   @id // sha256(fileBytes | backend | model | PROMPT_VERSION)
+  resultJson  Json // validated ExtractionResult
+  model       String
+  createdAt   DateTime @default(now())
 }
 
 model Event {
@@ -42,9 +112,10 @@ model Event {
   allDay   Boolean  @default(false)
   location String?
   notes    String?
-  sourceId String? // provenance; only proposal acceptance sets this (Phase 2)
+  sourceId String? // provenance; only proposal acceptance sets this
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  source Source? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
 
   @@index([userId, startAt])
 }
@@ -60,11 +131,12 @@ model Task {
   priority    Priority   @default(MEDIUM)
   status      TaskStatus @default(TODO)
   sortOrder   Int        @default(0)
-  sourceId    String? // provenance; only proposal acceptance sets this (Phase 2)
+  sourceId    String? // provenance; only proposal acceptance sets this
   createdAt   DateTime   @default(now())
   completedAt DateTime?
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  source Source? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
 
   @@index([userId, status, dueAt])
   @@index([userId, courseId])

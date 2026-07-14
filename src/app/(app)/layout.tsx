@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { requireUser, signOut } from "@/lib/auth";
 import { Providers } from "@/components/providers";
+import { GlobalPasteHandler } from "@/components/upload/GlobalPasteHandler";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -65,7 +66,10 @@ export default async function AppLayout({
         </div>
       </aside>
       <main className="flex flex-1 flex-col pb-14 sm:pb-0">
-        <Providers>{children}</Providers>
+        <Providers>
+          <GlobalPasteHandler />
+          {children}
+        </Providers>
       </main>
       {/* bottom tab bar on phones; sidebar covers >= sm */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-panel sm:hidden">
