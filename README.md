@@ -33,6 +33,24 @@ Google OAuth client (consent screen in *Testing* mode) needs redirect URI
 | `pnpm prisma migrate dev` | create/apply migrations |
 | `pnpm format` | prettier |
 
+## Always-on (start at login)
+
+`scripts/serve.sh` boots the whole stack (Colima → Postgres → app). To run it
+automatically at login via launchd:
+
+```bash
+cp scripts/com.aryankabra.aynat.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.aryankabra.aynat.plist
+```
+
+Manage it with:
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.aryankabra.aynat   # restart (e.g. after schema changes)
+launchctl bootout gui/$(id -u)/com.aryankabra.aynat        # stop + disable
+tail -f ~/Library/Logs/aynat.log                           # logs
+```
+
 ## Gotchas
 
 - **Restart `pnpm dev` after any schema change.** The Prisma client singleton
