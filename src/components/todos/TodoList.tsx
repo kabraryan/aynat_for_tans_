@@ -52,6 +52,7 @@ function QuickAdd({ tz, courses }: { tz: string; courses: Course[] }) {
             allDayDue: parsed.allDayDue,
             priority: parsed.priority,
             courseId: parsed.courseId,
+            repeat: "NONE",
           });
           setInput("");
         }}

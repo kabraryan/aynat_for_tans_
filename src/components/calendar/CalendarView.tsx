@@ -6,6 +6,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
+import rrulePlugin from "@fullcalendar/rrule";
 import type { EventDropArg } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { format } from "date-fns";
@@ -38,16 +39,34 @@ export function CalendarView({ tz }: { tz: string }) {
     const courseColor = (courseId: string | null) =>
       courses?.find((c) => c.id === courseId)?.color;
 
-    const evs = (events ?? []).map((e) => ({
-      id: e.id,
-      title: e.title,
-      start: e.allDay ? userDayKey(new Date(e.startAt), tz) : toWallString(new Date(e.startAt), tz),
-      end: e.allDay ? undefined : toWallString(new Date(e.endAt), tz),
-      allDay: e.allDay,
-      backgroundColor: courseColor(e.courseId) ?? "#4f46e5",
-      borderColor: "transparent",
-      extendedProps: { kind: "event" as const },
-    }));
+    const evs = (events ?? []).map((e) => {
+      const base = {
+        id: e.id,
+        title: e.title,
+        allDay: e.allDay,
+        backgroundColor: courseColor(e.courseId) ?? "#4f46e5",
+        borderColor: "transparent",
+        extendedProps: { kind: "event" as const },
+      };
+      if (e.rrule) {
+        // recurring series: rrule plugin expands occurrences; edit via dialog
+        const durationMs = Math.max(
+          new Date(e.endAt).getTime() - new Date(e.startAt).getTime(),
+          60_000,
+        );
+        return {
+          ...base,
+          rrule: `DTSTART:${toWallString(new Date(e.startAt), tz).replace(/[-:]/g, "")}\nRRULE:${e.rrule}`,
+          duration: e.allDay ? undefined : msToDuration(durationMs),
+          editable: false,
+        };
+      }
+      return {
+        ...base,
+        start: e.allDay ? userDayKey(new Date(e.startAt), tz) : toWallString(new Date(e.startAt), tz),
+        end: e.allDay ? undefined : toWallString(new Date(e.endAt), tz),
+      };
+    });
 
     // Open tasks with due dates render as visually-distinct all-day chips.
     const chips = (tasks ?? [])
@@ -67,6 +86,14 @@ export function CalendarView({ tz }: { tz: string }) {
 
     return [...evs, ...chips];
   }, [events, tasks, courses, tz]);
+
+  /** "HH:mm" duration for FullCalendar's rrule events. */
+  function msToDuration(ms: number): string {
+    const totalMinutes = Math.round(ms / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
 
   /** Re-anchor a dragged/resized event's local wall clock into the user tz. */
   function persistMove(arg: EventDropArg | EventResizeDoneArg) {
@@ -90,7 +117,7 @@ export function CalendarView({ tz }: { tz: string }) {
   return (
     <div className="flex-1 [&_.fc]:h-full [&_.task-chip]:border-l-2 [&_.task-chip_.fc-event-title]:font-medium">
       <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
         initialView={initialView}
         headerToolbar={{
           left: "prev,next today",

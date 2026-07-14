@@ -18,6 +18,14 @@ enum TaskStatus {
   DONE
 }
 
+enum RepeatFreq {
+  NONE
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 enum SourceType {
   UPLOAD
   EMAIL
@@ -120,6 +128,7 @@ model Event {
   allDay   Boolean  @default(false)
   location String?
   notes    String?
+  rrule    String? // RFC 5545 subset, e.g. "FREQ=WEEKLY;INTERVAL=2;UNTIL=20261209"
   sourceId String? // provenance; only proposal acceptance sets this
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
@@ -139,6 +148,8 @@ model Task {
   priority    Priority   @default(MEDIUM)
   status      TaskStatus @default(TODO)
   sortOrder   Int        @default(0)
+  repeat      RepeatFreq @default(NONE)
+  repeatUntil DateTime? // UTC; completing past this stops the chain
   sourceId    String? // provenance; only proposal acceptance sets this
   createdAt   DateTime   @default(now())
   completedAt DateTime?

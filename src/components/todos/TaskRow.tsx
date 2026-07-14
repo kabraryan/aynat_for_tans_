@@ -33,6 +33,10 @@ function TaskEditor({
   const [time, setTime] = useState(
     zonedDue && !task.allDayDue ? format(zonedDue, "HH:mm") : "",
   );
+  const [repeat, setRepeat] = useState(task.repeat);
+  const [repeatUntil, setRepeatUntil] = useState(
+    task.repeatUntil ? format(new TZDate(new Date(task.repeatUntil), tz), "yyyy-MM-dd") : "",
+  );
 
   return (
     <form
@@ -49,6 +53,11 @@ function TaskEditor({
             priority,
             dueAt: date ? fromWallTime(date, time || null, tz).toISOString() : null,
             allDayDue: Boolean(date) && !time,
+            repeat: date ? repeat : "NONE",
+            repeatUntil:
+              date && repeat !== "NONE" && repeatUntil
+                ? fromWallTime(repeatUntil, "23:59", tz).toISOString()
+                : null,
           },
           { onSuccess: onClose },
         );
@@ -102,6 +111,28 @@ function TaskEditor({
           <option value="MEDIUM">Medium</option>
           <option value="HIGH">High</option>
         </select>
+        <select
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value as Task["repeat"])}
+          disabled={!date}
+          title={date ? "Repeats after completion" : "Set a due date first"}
+          className="rounded-md border border-line bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent disabled:opacity-40"
+        >
+          <option value="NONE">No repeat</option>
+          <option value="DAILY">Daily</option>
+          <option value="WEEKLY">Weekly</option>
+          <option value="BIWEEKLY">Biweekly</option>
+          <option value="MONTHLY">Monthly</option>
+        </select>
+        {repeat !== "NONE" && date && (
+          <input
+            type="date"
+            value={repeatUntil}
+            onChange={(e) => setRepeatUntil(e.target.value)}
+            title="Repeat until (optional)"
+            className="rounded-md border border-line px-2 py-1.5 text-sm outline-none focus:border-accent"
+          />
+        )}
         <div className="ml-auto flex gap-2">
           <button type="button" onClick={onClose} className="px-2 py-1 text-xs text-ink-muted hover:text-ink">
             Cancel
@@ -188,7 +219,14 @@ export function TaskRow({
             </span>
           )}
           {task.dueAt && (
-            <span>{formatDueLabel(new Date(task.dueAt), task.allDayDue, tz)}</span>
+            <span>
+              {formatDueLabel(new Date(task.dueAt), task.allDayDue, tz)}
+              {task.repeat !== "NONE" && (
+                <span className="ml-1" title={`Repeats ${task.repeat.toLowerCase()}`}>
+                  ↻
+                </span>
+              )}
+            </span>
           )}
         </div>
       </div>

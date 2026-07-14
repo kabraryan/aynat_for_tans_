@@ -60,6 +60,20 @@ export function EventDialog({
   const [courseId, setCourseId] = useState(editing?.courseId ?? "");
   const [location, setLocation] = useState(editing?.location ?? "");
   const [notes, setNotes] = useState(editing?.notes ?? "");
+  // limited recurrence subset: FREQ[;INTERVAL=2][;UNTIL=YYYYMMDD]
+  const existingRrule = editing?.rrule ?? "";
+  const [repeat, setRepeat] = useState(
+    /FREQ=WEEKLY;INTERVAL=2/.test(existingRrule)
+      ? "BIWEEKLY"
+      : /FREQ=WEEKLY/.test(existingRrule)
+        ? "WEEKLY"
+        : /FREQ=MONTHLY/.test(existingRrule)
+          ? "MONTHLY"
+          : "NONE",
+  );
+  const [repeatUntil, setRepeatUntil] = useState(
+    existingRrule.match(/UNTIL=(\d{4})(\d{2})(\d{2})/)?.slice(1).join("-") ?? "",
+  );
 
   const busy = create.isPending || update.isPending || remove.isPending;
 
@@ -70,6 +84,16 @@ export function EventDialog({
     const endAt = allDay
       ? fromWallTime(date, "23:59", tz).toISOString()
       : fromWallTime(date, endTime >= startTime ? endTime : startTime, tz).toISOString();
+    const rrule =
+      repeat === "NONE"
+        ? null
+        : [
+            repeat === "MONTHLY" ? "FREQ=MONTHLY" : "FREQ=WEEKLY",
+            repeat === "BIWEEKLY" ? "INTERVAL=2" : null,
+            repeatUntil ? `UNTIL=${repeatUntil.replaceAll("-", "")}` : null,
+          ]
+            .filter(Boolean)
+            .join(";");
     const payload = {
       title: title.trim(),
       startAt,
@@ -78,6 +102,7 @@ export function EventDialog({
       courseId: courseId || null,
       location: location.trim() || null,
       notes: notes.trim() || null,
+      rrule,
     };
     if (editing) update.mutate({ id: editing.id, ...payload }, { onSuccess: onClose });
     else create.mutate(payload, { onSuccess: onClose });
@@ -155,6 +180,29 @@ export function EventDialog({
             placeholder="Location (opt.)"
             className="flex-1 rounded-md border border-line px-2.5 py-1.5 text-sm outline-none focus:border-accent"
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={repeat}
+            onChange={(e) => setRepeat(e.target.value)}
+            className="rounded-md border border-line bg-panel px-2 py-1.5 text-sm outline-none focus:border-accent"
+          >
+            <option value="NONE">No repeat</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="BIWEEKLY">Biweekly</option>
+            <option value="MONTHLY">Monthly</option>
+          </select>
+          {repeat !== "NONE" && (
+            <>
+              <span className="text-xs text-ink-faint">until</span>
+              <input
+                type="date"
+                value={repeatUntil}
+                onChange={(e) => setRepeatUntil(e.target.value)}
+                className="rounded-md border border-line px-2 py-1.5 text-sm outline-none focus:border-accent"
+              />
+            </>
+          )}
         </div>
         <textarea
           value={notes}

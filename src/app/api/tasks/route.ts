@@ -22,11 +22,12 @@ export async function POST(req: Request) {
   const body = await parseBody(req, taskCreateSchema);
   if ("response" in body) return body.response;
 
-  const { dueAt, courseId, ...rest } = body.data;
+  const { dueAt, courseId, repeatUntil, ...rest } = body.data;
   const task = await db.task.create({
     data: {
       ...rest,
       dueAt: dueAt ? new Date(dueAt) : null,
+      repeatUntil: repeatUntil ? new Date(repeatUntil) : null,
       // scope the FK to this user; silently dropping a foreign courseId
       ...(courseId
         ? { courseId: (await db.course.findFirst({ where: { id: courseId, userId: auth.userId } }))?.id ?? null }

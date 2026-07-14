@@ -14,6 +14,8 @@ export type Task = {
   priority: "LOW" | "MEDIUM" | "HIGH";
   status: "TODO" | "DONE";
   sortOrder: number;
+  repeat: "NONE" | "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY";
+  repeatUntil: string | null;
   createdAt: string;
   completedAt: string | null;
 };

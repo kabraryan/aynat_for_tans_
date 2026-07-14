@@ -13,6 +13,7 @@ export type CalEvent = {
   courseId: string | null;
   location: string | null;
   notes: string | null;
+  rrule: string | null;
 };
 
 const KEY = ["events"] as const;

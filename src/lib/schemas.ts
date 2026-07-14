@@ -27,10 +27,23 @@ export const taskCreateSchema = z.object({
   dueAt: z.iso.datetime().nullish(),
   allDayDue: z.boolean().default(false),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"),
+  repeat: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).default("NONE"),
+  repeatUntil: z.iso.datetime().nullish(),
 });
 
-export const taskUpdateSchema = taskCreateSchema
-  .extend({
+// NOT taskCreateSchema.partial(): Zod applies .default() even through
+// .partial(), which would silently reset priority/allDayDue/repeat on every
+// partial update (e.g. a status toggle). Update schemas carry no defaults.
+export const taskUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    notes: z.string().trim().max(2000).nullish(),
+    courseId: z.string().nullish(),
+    dueAt: z.iso.datetime().nullish(),
+    allDayDue: z.boolean(),
+    priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+    repeat: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]),
+    repeatUntil: z.iso.datetime().nullish(),
     status: z.enum(["TODO", "DONE"]),
   })
   .partial();
@@ -42,6 +55,14 @@ export const taskReorderSchema = z.object({
 export type TaskCreate = z.infer<typeof taskCreateSchema>;
 export type TaskUpdate = z.infer<typeof taskUpdateSchema>;
 
+/** Limited RFC 5545 subset the UI can produce. */
+export const rruleString = z
+  .string()
+  .regex(
+    /^FREQ=(DAILY|WEEKLY|MONTHLY)(;INTERVAL=\d{1,2})?(;UNTIL=\d{8})?$/,
+    "Unsupported recurrence rule",
+  );
+
 /** Event inputs — same rule: no `sourceId` (gate, §10.1). */
 export const eventCreateSchema = z
   .object({
@@ -52,6 +73,7 @@ export const eventCreateSchema = z
     courseId: z.string().nullish(),
     location: z.string().trim().max(200).nullish(),
     notes: z.string().trim().max(2000).nullish(),
+    rrule: rruleString.nullish(),
   })
   .refine((e) => new Date(e.endAt) >= new Date(e.startAt), {
     message: "endAt must not precede startAt",
@@ -67,6 +89,7 @@ export const eventUpdateSchema = z
     courseId: z.string().nullish(),
     location: z.string().trim().max(200).nullish(),
     notes: z.string().trim().max(2000).nullish(),
+    rrule: rruleString.nullish(),
   })
   .partial()
   .refine(
