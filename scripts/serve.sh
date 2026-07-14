@@ -22,5 +22,9 @@ until docker compose exec -T db pg_isready -U aynat -d aynat >/dev/null 2>&1; do
   sleep 1
 done
 
-# 3. App — exec so launchd supervises the server process itself
+# 3. Take over port 3000 from any leftover dev server (only Aynat uses it)
+lsof -iTCP:3000 -sTCP:LISTEN -t 2>/dev/null | xargs kill 2>/dev/null || true
+sleep 1
+
+# 4. App — exec so launchd supervises the server process itself
 exec pnpm dev
