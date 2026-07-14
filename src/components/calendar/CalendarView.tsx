@@ -22,7 +22,14 @@ import { EventDialog, type DialogState } from "@/components/calendar/EventDialog
  * is re-anchored with fromWallTime. FullCalendar itself runs in "local" mode
  * and never sees a UTC instant, so no timezone plugin is needed.
  */
-export function CalendarView({ tz }: { tz: string }) {
+export function CalendarView({
+  tz,
+  initialDate,
+}: {
+  tz: string;
+  /** Deep link (e.g. from the workload view): open this week directly. */
+  initialDate?: string;
+}) {
   const { data: events } = useEvents();
   const { data: tasks } = useTasks();
   const { data: courses } = useCourses();
@@ -30,9 +37,11 @@ export function CalendarView({ tz }: { tz: string }) {
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   // Phones get the agenda list by default; drag targets are too small there.
   const [initialView] = useState(() =>
-    typeof window !== "undefined" && window.innerWidth < 640
-      ? "listWeek"
-      : "dayGridMonth",
+    initialDate
+      ? "timeGridWeek"
+      : typeof window !== "undefined" && window.innerWidth < 640
+        ? "listWeek"
+        : "dayGridMonth",
   );
 
   const calendarEvents = useMemo(() => {
@@ -119,6 +128,7 @@ export function CalendarView({ tz }: { tz: string }) {
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
         initialView={initialView}
+        initialDate={initialDate}
         headerToolbar={{
           left: "prev,next today",
           center: "title",

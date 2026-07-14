@@ -9,6 +9,7 @@ const nav = [
   { href: "/calendar", label: "Calendar" },
   { href: "/todos", label: "Tasks" },
   { href: "/review", label: "Review" },
+  { href: "/workload", label: "Workload" },
   { href: "/settings", label: "Settings" },
 ];
 
