@@ -94,22 +94,40 @@ export function SourceReview({ sourceId, tz }: { sourceId: string; tz: string })
         pending.map((p) => <ProposalCard key={p.id} proposal={p} tz={tz} />)
       )}
 
-      {pending.length === 0 && (
-        <div className="rounded-xl border border-line bg-panel p-8 text-center">
-          <p className="text-sm">All reviewed.</p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Accepted items are on your{" "}
-            <Link href="/todos" className="text-accent hover:underline">
-              tasks
-            </Link>{" "}
-            and{" "}
-            <Link href="/calendar" className="text-accent hover:underline">
-              calendar
-            </Link>
-            .
-          </p>
-        </div>
-      )}
+      {pending.length === 0 &&
+        (source.totalCount === 0 ? (
+          <div className="flex flex-col gap-3 rounded-xl border border-line bg-panel p-8 text-center">
+            <p className="text-sm font-medium">No dated tasks or events found</p>
+            <p className="mx-auto max-w-md text-xs text-ink-muted">
+              Extraction finished, but this document contains nothing schedulable — no due
+              dates, exam dates, or timed sessions. Reference documents (curriculum guides,
+              subject briefs, grading policies) typically extract nothing. A course syllabus
+              with a dated assessment schedule will.
+            </p>
+            <button
+              onClick={() => retry.mutate(sourceId)}
+              disabled={retry.isPending}
+              className="mx-auto rounded-md border border-line px-3.5 py-1.5 text-xs font-medium text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
+            >
+              {retry.isPending ? "Retrying…" : "Retry extraction anyway"}
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-line bg-panel p-8 text-center">
+            <p className="text-sm">All reviewed.</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Accepted items are on your{" "}
+              <Link href="/todos" className="text-accent hover:underline">
+                tasks
+              </Link>{" "}
+              and{" "}
+              <Link href="/calendar" className="text-accent hover:underline">
+                calendar
+              </Link>
+              .
+            </p>
+          </div>
+        ))}
     </div>
   );
 }

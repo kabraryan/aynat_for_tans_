@@ -174,3 +174,23 @@ describe("accept-all", () => {
     expect(await db.proposal.count({ where: { status: "PENDING" } })).toBe(0);
   });
 });
+
+describe("recent sources listing", () => {
+  it("includes zero-proposal sources with honest counts", async () => {
+    const user = await makeUser("empty@test.dev");
+    currentUser.id = user.id;
+    const source = await makeSource(user.id);
+    await db.source.update({ where: { id: source.id }, data: { status: "EXTRACTED" } });
+
+    const { GET: listSources } = await import("@/app/api/sources/route");
+    const res = await listSources();
+    const body = await res.json();
+    expect(body).toHaveLength(1);
+    expect(body[0]).toMatchObject({
+      id: source.id,
+      status: "EXTRACTED",
+      totalCount: 0,
+      pendingCount: 0,
+    });
+  });
+});

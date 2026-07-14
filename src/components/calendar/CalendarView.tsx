@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -14,6 +15,7 @@ import { fromWallTime, toWallString, userDayKey } from "@/lib/dates";
 import { useCourses } from "@/hooks/useCourses";
 import { useEvents, useUpdateEvent } from "@/hooks/useEvents";
 import { useTasks } from "@/hooks/useTasks";
+import { uploadFile } from "@/hooks/useProposals";
 import { EventDialog, type DialogState } from "@/components/calendar/EventDialog";
 
 /**
@@ -34,6 +36,9 @@ export function CalendarView({
   const { data: tasks } = useTasks();
   const { data: courses } = useCourses();
   const updateEvent = useUpdateEvent();
+  const router = useRouter();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   // Phones get the agenda list by default; drag targets are too small there.
   const [initialView] = useState(() =>
@@ -183,19 +188,47 @@ export function CalendarView({
           onClose={() => setDialog({ mode: "closed" })}
         />
       )}
-      <button
-        onClick={() =>
-          setDialog({
-            mode: "create",
-            date: userDayKey(new Date(), tz),
-            startTime: "09:00",
-            endTime: "10:00",
-          })
-        }
-        className="fixed bottom-6 right-6 rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-accent-hover"
-      >
-        + Event
-      </button>
+      <div className="fixed bottom-20 right-6 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:flex-row sm:items-center">
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,application/pdf"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            setImporting(true);
+            try {
+              const source = await uploadFile(file);
+              router.push(`/review/${source.id}`);
+            } catch {
+              setImporting(false);
+            }
+          }}
+        />
+        <button
+          onClick={() => fileInput.current?.click()}
+          disabled={importing}
+          title="Upload a screenshot or syllabus — extracted items go through Review, then land here"
+          className="rounded-full border border-accent bg-panel px-4 py-2.5 text-sm font-medium text-accent shadow-lg hover:bg-accent-soft disabled:opacity-50"
+        >
+          {importing ? "Uploading…" : "⇪ Import"}
+        </button>
+        <button
+          onClick={() =>
+            setDialog({
+              mode: "create",
+              date: userDayKey(new Date(), tz),
+              startTime: "09:00",
+              endTime: "10:00",
+            })
+          }
+          className="rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-accent-hover"
+        >
+          + Event
+        </button>
+      </div>
     </div>
   );
 }

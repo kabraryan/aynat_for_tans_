@@ -16,6 +16,9 @@ export async function GET(_req: Request, { params }: Params) {
   });
   if (!source) return notFound();
 
+  // distinguishes "nothing extractable found" from "all reviewed"
+  const totalCount = await db.proposal.count({ where: { sourceId: source.id } });
+
   return NextResponse.json({
     id: source.id,
     type: source.type,
@@ -24,5 +27,6 @@ export async function GET(_req: Request, { params }: Params) {
     error: source.error,
     createdAt: source.createdAt,
     pendingCount: source._count.proposals,
+    totalCount,
   });
 }

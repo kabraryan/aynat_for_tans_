@@ -22,7 +22,19 @@ export type SourceStatus = {
   status: "PENDING" | "EXTRACTED" | "FAILED";
   error: string | null;
   pendingCount: number;
+  totalCount: number;
+  createdAt: string;
 };
+
+export function useRecentSources() {
+  return useQuery({
+    queryKey: ["sources"],
+    queryFn: () => apiFetch<SourceStatus[]>("/api/sources"),
+    refetchInterval: (query) =>
+      query.state.data?.some((s) => s.status === "PENDING") ? 2000 : false,
+    refetchIntervalInBackground: true,
+  });
+}
 
 const PROPOSALS_KEY = ["proposals"] as const;
 

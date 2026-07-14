@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { requireUser, signOut } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { Providers } from "@/components/providers";
 import { GlobalPasteHandler } from "@/components/upload/GlobalPasteHandler";
+import { ReminderWatcher } from "@/components/reminders/ReminderWatcher";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -17,6 +19,11 @@ export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireUser();
+  const dbUser = await db.user.findUnique({
+    where: { id: user.id },
+    select: { timezone: true },
+  });
+  const tz = dbUser?.timezone ?? "Asia/Kolkata";
 
   return (
     <div className="flex min-h-screen w-full">
@@ -69,6 +76,7 @@ export default async function AppLayout({
       <main className="flex flex-1 flex-col pb-14 sm:pb-0">
         <Providers>
           <GlobalPasteHandler />
+          <ReminderWatcher tz={tz} />
           {children}
         </Providers>
       </main>
