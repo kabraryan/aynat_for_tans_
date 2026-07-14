@@ -12,7 +12,8 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
 import { dueGroup, type DueGroup } from "@/lib/dates";
-import { useCourses } from "@/hooks/useCourses";
+import { describeParsed, parseQuickAdd } from "@/lib/quickadd";
+import { useCourses, type Course } from "@/hooks/useCourses";
 import { useCreateTask, useReorderTasks, useTasks, TASKS_KEY, type Task } from "@/hooks/useTasks";
 import { TaskRow } from "@/components/todos/TaskRow";
 
@@ -24,33 +25,73 @@ const GROUPS: { key: DueGroup; label: string }[] = [
   { key: "none", label: "No date" },
 ];
 
-function QuickAdd() {
+function QuickAdd({ tz, courses }: { tz: string; courses: Course[] }) {
   const create = useCreateTask();
-  const [title, setTitle] = useState("");
+  const [input, setInput] = useState("");
+
+  const parsed = useMemo(
+    () =>
+      input.trim()
+        ? parseQuickAdd(input, { now: new Date(), tz, courses })
+        : null,
+    [input, tz, courses],
+  );
+  const chips = parsed ? describeParsed(parsed, tz) : [];
+  const course = parsed?.courseId ? courses.find((c) => c.id === parsed.courseId) : null;
+
   return (
-    <form
-      className="flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        create.mutate({ title: title.trim(), allDayDue: false, priority: "MEDIUM" });
-        setTitle("");
-      }}
-    >
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Add a task…"
-        className="w-full flex-1 rounded-lg border border-line bg-panel px-3 py-2.5 text-sm outline-none placeholder:text-ink-faint focus:border-accent"
-      />
-      <button
-        type="submit"
-        disabled={!title.trim() || create.isPending}
-        className="rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40"
+    <div className="flex flex-col gap-1.5">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!parsed?.title) return;
+          create.mutate({
+            title: parsed.title,
+            dueAt: parsed.dueAt,
+            allDayDue: parsed.allDayDue,
+            priority: parsed.priority,
+            courseId: parsed.courseId,
+          });
+          setInput("");
+        }}
       >
-        Add
-      </button>
-    </form>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Add a task…  try: ps4 friday 5pm #cs201 !high"
+          className="w-full flex-1 rounded-lg border border-line bg-panel px-3 py-2.5 text-sm outline-none placeholder:text-ink-faint focus:border-accent"
+        />
+        <button
+          type="submit"
+          disabled={!parsed?.title || create.isPending}
+          className="rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-40"
+        >
+          Add
+        </button>
+      </form>
+      {parsed && (chips.length > 0 || course) && (
+        <div className="flex items-center gap-1.5 px-1">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-medium text-accent"
+            >
+              {chip}
+            </span>
+          ))}
+          {course && (
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+              style={{ backgroundColor: `${course.color}20`, color: course.color }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: course.color }} />
+              {course.name}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -104,7 +145,7 @@ export function TodoList({ tz }: { tz: string }) {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-5">
-      <QuickAdd />
+      <QuickAdd tz={tz} courses={courses ?? []} />
 
       <div className="flex items-center gap-2">
         <select
