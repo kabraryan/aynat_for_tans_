@@ -6,6 +6,7 @@ import { storage } from "@/lib/storage";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/extraction/prompt";
 import { ExtractionResult, type ExtractedItemT, type ExtractionResultT } from "@/lib/extraction/schema";
 import { resolveBackend, type ExtractionInput } from "@/lib/extraction/backends";
+import { runValidated } from "@/lib/extraction/run";
 import type { Proposal } from "@/generated/prisma/client";
 
 /**
@@ -23,7 +24,9 @@ export async function extractFromSource(sourceId: string): Promise<Proposal[]> {
   try {
     const backend = resolveBackend();
     const input = await buildInput(source);
-    const result = await withCache(source, backend.name, () => runValidated(backend, input));
+    const result = await withCache(source, backend.name, () =>
+      runValidated(backend, input),
+    );
     const proposals = await writeProposals(source.id, source.userId, result.items);
     await db.source.update({
       where: { id: source.id },
@@ -62,39 +65,6 @@ async function buildInput(source: SourceWithUser): Promise<ExtractionInput & { b
   // EMAIL sources (Phase 4) carry their text in `excerpt`'s full-body sibling;
   // for now the excerpt is the text.
   return { prompt, text: source.excerpt ?? "", bytes: null };
-}
-
-/** Parse + validate the backend's raw text; one corrective retry on failure. */
-async function runValidated(
-  backend: ReturnType<typeof resolveBackend>,
-  input: ExtractionInput,
-): Promise<ExtractionResultT> {
-  const first = await backend.extract(input);
-  const parsed = tryParse(first);
-  if (parsed.ok) return parsed.value;
-
-  const second = await backend.extract({ ...input, correction: parsed.error });
-  const reparsed = tryParse(second);
-  if (reparsed.ok) return reparsed.value;
-  throw new Error(`extraction output failed validation twice: ${reparsed.error}`);
-}
-
-function tryParse(raw: string): { ok: true; value: ExtractionResultT } | { ok: false; error: string } {
-  // tolerate fences/prose: take the outermost JSON object
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  if (start === -1 || end <= start) return { ok: false, error: "no JSON object found in response" };
-  let json: unknown;
-  try {
-    json = JSON.parse(raw.slice(start, end + 1));
-  } catch (e) {
-    return { ok: false, error: `invalid JSON: ${String(e)}` };
-  }
-  const result = ExtractionResult.safeParse(json);
-  if (!result.success) {
-    return { ok: false, error: JSON.stringify(result.error.issues).slice(0, 1500) };
-  }
-  return { ok: true, value: result.data };
 }
 
 /** Content-hash cache: re-uploading the same file never re-runs the model. */

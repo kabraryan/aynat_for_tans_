@@ -28,7 +28,8 @@ Google OAuth client (consent screen in *Testing* mode) needs redirect URI
 | Command | What |
 |---|---|
 | `pnpm dev` | dev server (port 3000 — pinned; OAuth redirect URI depends on it) |
-| `pnpm typecheck` / `pnpm lint` / `pnpm test` | the CI trio |
+| `pnpm typecheck` / `pnpm lint` / `pnpm test` | the CI trio (tests need the Postgres container: they use an `aynat_test` DB + the stub backend) |
+| `pnpm eval` | score extraction against `fixtures/` (runs the real backend — agent by default) |
 | `pnpm prisma migrate dev` | create/apply migrations |
 | `pnpm format` | prettier |
 
@@ -41,4 +42,8 @@ Google OAuth client (consent screen in *Testing* mode) needs redirect URI
   IANA timezone (default `Asia/Kolkata`) at the edges. Don't do date math
   elsewhere.
 - The proposal gate (spec §10.1): manual CRUD never accepts `sourceId`;
-  only proposal acceptance (Phase 2, `src/lib/proposals.ts`) sets it.
+  only proposal acceptance (`src/lib/proposals.ts`) sets it. The proofs live
+  in `tests/api/gate.test.ts` and run in CI.
+- Extraction backends (`EXTRACTION_BACKEND`): `agent` drives the locally
+  signed-in Claude Code CLI headlessly (subscription, no API key — local
+  only); `stub` returns canned items; `api` is reserved for the deploy path.

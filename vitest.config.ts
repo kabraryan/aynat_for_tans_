@@ -10,5 +10,9 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    setupFiles: ["tests/setup/test-env.ts"],
+    globalSetup: ["tests/setup/global-setup.ts"],
+    // DB tests share one database — avoid cross-file interleaving
+    fileParallelism: false,
   },
 });

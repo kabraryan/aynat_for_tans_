@@ -8,6 +8,22 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: aynat
+          POSTGRES_PASSWORD: aynat
+          POSTGRES_DB: aynat
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aynat -d aynat"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://aynat:aynat@localhost:5432/aynat
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

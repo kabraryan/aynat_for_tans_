@@ -1,0 +1,7 @@
+{
+  "file": "screenshots/assignment-page.png",
+  "items": [
+    { "kind": "task", "title": "Assignment 5: Balanced Trees", "dayIST": "2026-07-24" },
+    { "kind": "event", "title": "Quiz 3", "dayIST": "2026-07-21" }
+  ]
+}

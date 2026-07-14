@@ -1,0 +1,10 @@
+{
+  "file": "pdfs/phy102-syllabus.pdf",
+  "items": [
+    { "kind": "task", "title": "Problem Set 1", "dayIST": "2026-08-17" },
+    { "kind": "task", "title": "Problem Set 2", "dayIST": "2026-08-31" },
+    { "kind": "event", "title": "Midterm Exam", "dayIST": "2026-09-16" },
+    { "kind": "task", "title": "Problem Set 3", "dayIST": "2026-10-05" },
+    { "kind": "event", "title": "Final Exam", "dayIST": "2026-12-09" }
+  ]
+}

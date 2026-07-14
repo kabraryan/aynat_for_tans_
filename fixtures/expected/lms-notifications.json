@@ -1,0 +1,7 @@
+{
+  "file": "screenshots/lms-notifications.png",
+  "items": [
+    { "kind": "task", "title": "Lab report 2", "dayIST": "2026-08-03" },
+    { "kind": "event", "title": "Midterm exam", "dayIST": "2026-08-10" }
+  ]
+}
