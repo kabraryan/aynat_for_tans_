@@ -44,6 +44,8 @@ export function useSourcePolling(sourceId: string | null) {
     enabled: Boolean(sourceId),
     refetchInterval: (query) =>
       query.state.data?.status === "PENDING" ? 1500 : false,
+    // keep polling while the user waits in another tab
+    refetchIntervalInBackground: true,
   });
 }
 

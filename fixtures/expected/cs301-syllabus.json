@@ -1,0 +1,17 @@
+{
+  "file": "pdfs/cs301-syllabus.pdf",
+  "items": [
+    { "kind": "task", "title": "Problem Set 1", "dayIST": "2026-08-21" },
+    { "kind": "task", "title": "Problem Set 2", "dayIST": "2026-09-04" },
+    { "kind": "event", "title": "Quiz 1", "dayIST": "2026-09-09" },
+    { "kind": "task", "title": "Problem Set 3", "dayIST": "2026-09-25" },
+    { "kind": "event", "title": "Midterm Exam", "dayIST": "2026-10-07" },
+    { "kind": "task", "title": "Problem Set 4", "dayIST": "2026-10-23" },
+    { "kind": "event", "title": "Quiz 2", "dayIST": "2026-10-28" },
+    { "kind": "task", "title": "Project proposal", "dayIST": "2026-11-02" },
+    { "kind": "task", "title": "Problem Set 5", "dayIST": "2026-11-13" },
+    { "kind": "event", "title": "Project presentations", "dayIST": "2026-11-30" },
+    { "kind": "task", "title": "Final project report", "dayIST": "2026-12-09" },
+    { "kind": "event", "title": "Final Exam", "dayIST": "2026-12-16" }
+  ]
+}

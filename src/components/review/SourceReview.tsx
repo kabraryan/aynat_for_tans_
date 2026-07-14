@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useAcceptAll,
   useProposals,
@@ -8,12 +10,25 @@ import {
   useSourcePolling,
 } from "@/hooks/useProposals";
 import { ProposalCard } from "@/components/review/ProposalCard";
+import { BatchReviewTable } from "@/components/review/BatchReviewTable";
+
+/** Many-item sources (syllabi) get the table; small ones keep the cards. */
+const BATCH_THRESHOLD = 8;
 
 export function SourceReview({ sourceId, tz }: { sourceId: string; tz: string }) {
   const { data: source } = useSourcePolling(sourceId);
   const { data: proposals } = useProposals(sourceId);
   const acceptAll = useAcceptAll();
   const retry = useRetryExtraction();
+  const qc = useQueryClient();
+
+  // when extraction finishes, pull in the fresh proposals immediately
+  const status = source?.status;
+  useEffect(() => {
+    if (status === "EXTRACTED") {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+    }
+  }, [status, qc]);
 
   if (!source) return <p className="text-xs text-ink-faint">Loading…</p>;
 
@@ -56,7 +71,7 @@ export function SourceReview({ sourceId, tz }: { sourceId: string; tz: string })
             saved until you accept it
           </p>
         </div>
-        {pending.length > 1 && (
+        {pending.length > 1 && pending.length <= BATCH_THRESHOLD && (
           <button
             onClick={() => acceptAll.mutate(sourceId)}
             disabled={acceptAll.isPending}
@@ -73,9 +88,11 @@ export function SourceReview({ sourceId, tz }: { sourceId: string; tz: string })
         </p>
       )}
 
-      {pending.map((p) => (
-        <ProposalCard key={p.id} proposal={p} tz={tz} />
-      ))}
+      {pending.length > BATCH_THRESHOLD ? (
+        <BatchReviewTable proposals={pending} tz={tz} />
+      ) : (
+        pending.map((p) => <ProposalCard key={p.id} proposal={p} tz={tz} />)
+      )}
 
       {pending.length === 0 && (
         <div className="rounded-xl border border-line bg-panel p-8 text-center">

@@ -1,12 +1,17 @@
 import crypto from "node:crypto";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { format } from "date-fns";
 import { TZDate } from "@date-fns/tz";
 import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { buildPrompt, PROMPT_VERSION } from "@/lib/extraction/prompt";
 import { ExtractionResult, type ExtractedItemT, type ExtractionResultT } from "@/lib/extraction/schema";
-import { resolveBackend, type ExtractionInput } from "@/lib/extraction/backends";
+import { resolveBackend, type ExtractionBackend } from "@/lib/extraction/backends";
 import { runValidated } from "@/lib/extraction/run";
+import { chunkRanges, pageCount, splitPdf } from "@/lib/extraction/pdf";
+import { mergeResults } from "@/lib/extraction/merge";
 import type { Proposal } from "@/generated/prisma/client";
 
 /**
@@ -23,9 +28,8 @@ export async function extractFromSource(sourceId: string): Promise<Proposal[]> {
 
   try {
     const backend = resolveBackend();
-    const input = await buildInput(source);
     const result = await withCache(source, backend.name, () =>
-      runValidated(backend, input),
+      runSource(backend, source),
     );
     const proposals = await writeProposals(source.id, source.userId, result.items);
     await db.source.update({
@@ -49,7 +53,10 @@ type SourceWithUser = NonNullable<
   Awaited<ReturnType<typeof db.source.findUnique<{ where: { id: string }; include: { user: { select: { timezone: true } } } }>>>
 >;
 
-async function buildInput(source: SourceWithUser): Promise<ExtractionInput & { bytes: Buffer | null }> {
+async function runSource(
+  backend: ExtractionBackend,
+  source: SourceWithUser,
+): Promise<ExtractionResultT> {
   const tz = source.user.timezone;
   const now = new Date();
   const prompt = buildPrompt({
@@ -58,13 +65,33 @@ async function buildInput(source: SourceWithUser): Promise<ExtractionInput & { b
     timezone: tz,
   });
 
-  if (source.type === "UPLOAD" && source.fileKey) {
-    const bytes = await storage.get(source.fileKey);
-    return { prompt, filePath: storage.localPath!(source.fileKey), bytes };
+  if (source.type !== "UPLOAD" || !source.fileKey) {
+    // EMAIL sources (Phase 4): the body text travels on the source itself.
+    return runValidated(backend, { prompt, text: source.excerpt ?? "" });
   }
-  // EMAIL sources (Phase 4) carry their text in `excerpt`'s full-body sibling;
-  // for now the excerpt is the text.
-  return { prompt, text: source.excerpt ?? "", bytes: null };
+
+  // Large PDFs (syllabus mode, spec 6.4): chunk, extract sequentially, merge.
+  if (source.mimeType === "application/pdf") {
+    const bytes = await storage.get(source.fileKey);
+    const ranges = chunkRanges(await pageCount(bytes));
+    if (ranges.length > 1) {
+      const chunks = await splitPdf(bytes, ranges);
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "aynat-chunks-"));
+      try {
+        const results: ExtractionResultT[] = [];
+        for (let i = 0; i < chunks.length; i++) {
+          const chunkPath = path.join(tmpDir, `chunk-${i + 1}-of-${chunks.length}.pdf`);
+          await fs.writeFile(chunkPath, chunks[i]);
+          results.push(await runValidated(backend, { prompt, filePath: chunkPath }));
+        }
+        return mergeResults(results);
+      } finally {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+      }
+    }
+  }
+
+  return runValidated(backend, { prompt, filePath: storage.localPath!(source.fileKey) });
 }
 
 /** Content-hash cache: re-uploading the same file never re-runs the model. */
