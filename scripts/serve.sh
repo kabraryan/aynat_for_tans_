@@ -1,6 +1,6 @@
 #!/bin/bash
-# Boots the full Aynat stack: Colima (Docker) -> Postgres -> app on :3000.
-# Run by the com.aryankabra.aynat LaunchAgent at login; safe to run by hand.
+# Boots the full Aynat stack: Docker runtime -> Postgres -> app on :3000.
+# Run by the com.aynat.serve LaunchAgent at login; safe to run by hand.
 set -e
 
 # launchd provides a minimal PATH; include homebrew (pnpm/colima/docker)
@@ -10,7 +10,11 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:/usr/bin:/bin:/us
 cd "$(dirname "$0")/.."
 
 # 1. Docker runtime (idempotent; no-op when already running)
-colima start >/dev/null 2>&1 || true
+if command -v colima >/dev/null 2>&1; then
+  colima start >/dev/null 2>&1 || true
+elif [ -d "/Applications/Docker.app" ]; then
+  open -g -a Docker >/dev/null 2>&1 || true
+fi
 for _ in $(seq 1 60); do
   docker info >/dev/null 2>&1 && break
   sleep 2

@@ -82,6 +82,26 @@ describe("repeating tasks", () => {
     expect(await db.task.count()).toBe(2);
   });
 
+  it("spawned occurrences carry the parent's provenance forward unchanged", async () => {
+    const source = await db.source.create({
+      data: { userId: currentUser.id, type: "UPLOAD", originalName: "syllabus.pdf" },
+    });
+    const task = await db.task.create({
+      data: {
+        userId: currentUser.id,
+        title: "Weekly reading",
+        dueAt: new Date("2026-07-17T11:30:00Z"),
+        repeat: "WEEKLY",
+        sourceId: source.id, // set legitimately (as acceptance would)
+      },
+    });
+
+    await patch(task.id, { status: "DONE" });
+
+    const spawned = await db.task.findFirstOrThrow({ where: { status: "TODO" } });
+    expect(spawned.sourceId).toBe(source.id);
+  });
+
   it("uncompleting does not spawn", async () => {
     const task = await db.task.create({
       data: {

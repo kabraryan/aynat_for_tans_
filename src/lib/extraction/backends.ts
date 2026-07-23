@@ -110,6 +110,9 @@ export const agentBackend: ExtractionBackend = {
         "Read",
         "--permission-mode",
         "bypassPermissions",
+        ...(process.env.EXTRACTION_MODEL
+          ? ["--model", process.env.EXTRACTION_MODEL]
+          : []),
       ],
       { timeout: 240_000, maxBuffer: 16 * 1024 * 1024 },
     );
