@@ -55,8 +55,8 @@ involves no AI and no external calls.
 ## Quick start
 
 ```bash
-git clone https://github.com/kabraryan/aynat.git
-cd aynat
+git clone https://github.com/kabraryan/aynat_for_tans_.git
+cd aynat_for_tans_
 pnpm install                # also generates the Prisma client
 docker compose up -d        # Postgres 16 on localhost:5432
 cp .env.example .env        # then edit — see next section
