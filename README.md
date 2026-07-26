@@ -9,6 +9,9 @@ A personal web app that keeps a student's life on one calendar:
   semester of deadlines in one upload.
 - **Gmail sync (read-only)** — finds deadline-bearing school emails and turns
   them into proposed tasks. Nothing else is ever read or sent to a model.
+  Optional: background sync every 30 minutes, and auto-add for
+  high-confidence extractions (tagged, announced in a banner, one-click
+  undo).
 - **Quality of life** — natural-language quick-add ("ps4 friday 5pm #cs201
   !high"), recurring tasks/events, a workload heat-map ("which weeks are
   crushing"), and browser reminders.
@@ -18,6 +21,13 @@ A personal web app that keeps a student's life on one calendar:
 **proposal** you review, edit, and explicitly accept. Manual entry and
 accepted proposals are the only two write paths into your calendar. This is
 enforced by tests (`tests/api/gate.test.ts`).
+
+The one *opt-in* relaxation: **auto-add** (Settings → Gmail, off by default)
+lets a confidence policy press "accept" for you on email extractions scoring
+≥ 0.9 — through the exact same acceptance code path, tagged as auto-added,
+announced in a banner, and one-click undoable. Anything less confident still
+waits in Review, and uploads are never auto-added
+(`tests/api/autoaccept.test.ts`).
 
 Built with Next.js (App Router) · TypeScript · Tailwind · Prisma + Postgres ·
 Auth.js (Google) · TanStack Query · FullCalendar · dnd-kit · Zod.
@@ -90,10 +100,15 @@ drop a syllabus onto the **Review** page.
    and tune the keyword list. This pre-filter decides which emails are even
    *considered*; everything else never leaves your inbox.
 3. In the app: *Settings → Connect Gmail* (grants read-only scope) → *Sync now*.
+4. Optional automation, in the same section: **Auto-sync every 30 minutes**
+   (background fetch + extract while the server runs — pairs well with the
+   always-on setup below) and **Auto-add confident items** (≥ 0.9 confidence
+   goes straight to your calendar/tasks with a banner + undo; the threshold
+   is `AUTO_ACCEPT_MIN_CONFIDENCE` in `.env` if you want it stricter).
 
 Note: OAuth apps in *Testing* mode get refresh tokens that expire every ~7
 days — the app degrades to a one-click "Connect Gmail" re-consent, never data
-loss.
+loss. Background sync pauses when that happens and Settings tells you why.
 
 ### Optional: personalization
 

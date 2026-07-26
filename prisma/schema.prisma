@@ -66,9 +66,13 @@ model User {
 }
 
 model GmailSyncState {
-  userId     String    @id
-  lastSyncAt DateTime?
-  historyId  String?
+  userId         String    @id
+  lastSyncAt     DateTime?
+  historyId      String?
+  autoSync       Boolean   @default(false) // background sync every 30 min while the server runs
+  autoAccept     Boolean   @default(false) // auto-accept confident EMAIL proposals (via the same gate)
+  lastAutoSyncAt DateTime?
+  lastSyncError  String? // set when a background tick fails (e.g. expired Gmail token)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -102,6 +106,8 @@ model Proposal {
   payloadHash String // sha256 of normalized payload — re-extract dedupe
   confidence  Float
   status      ProposalStatus @default(PENDING)
+  autoAccepted   Boolean @default(false) // accepted by the confidence policy, not a click
+  acceptedItemId String? // id of the Task/Event acceptance created (kind disambiguates) — enables undo
   createdAt   DateTime       @default(now())
   resolvedAt  DateTime?
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -2,6 +2,7 @@ import { signIn } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { gmailConnected, GMAIL_SCOPE } from "@/lib/gmail/client";
 import { SyncNowButton } from "@/components/settings/SyncNowButton";
+import { GmailAutoToggles } from "@/components/settings/GmailAutoToggles";
 import { SCHOOL_DOMAINS } from "@/config/gmail-filters";
 
 export async function GmailSection({ userId }: { userId: string }) {
@@ -15,7 +16,8 @@ export async function GmailSection({ userId }: { userId: string }) {
       <h2 className="text-sm font-semibold">Gmail sync</h2>
       <p className="mt-1 text-xs text-ink-muted">
         Read-only. Only school-related email (from {SCHOOL_DOMAINS[0]}, your LMS, or with
-        deadline keywords) is considered — and nothing is saved without your review.
+        deadline keywords) is considered — and nothing is saved without your review, unless
+        you opt in to auto-add below (tagged and undoable).
       </p>
 
       <div className="mt-3 flex flex-col gap-3 rounded-lg border border-line bg-panel p-4">
@@ -30,6 +32,23 @@ export async function GmailSection({ userId }: { userId: string }) {
               )}
             </p>
             <SyncNowButton />
+            <GmailAutoToggles
+              initial={{
+                autoSync: state?.autoSync ?? false,
+                autoAccept: state?.autoAccept ?? false,
+              }}
+            />
+            {state?.autoSync && (
+              <p className="text-[11px] text-ink-faint">
+                {state.lastSyncError ? (
+                  <span className="text-danger">Auto-sync paused: {state.lastSyncError}</span>
+                ) : state.lastAutoSyncAt ? (
+                  <>last auto-sync {new Date(state.lastAutoSyncAt).toLocaleString()}</>
+                ) : (
+                  <>auto-sync runs within ~30 minutes of the server starting</>
+                )}
+              </p>
+            )}
           </>
         ) : (
           <>

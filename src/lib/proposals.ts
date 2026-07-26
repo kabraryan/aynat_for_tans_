@@ -19,7 +19,12 @@ export type AcceptResult =
 export async function acceptProposal(
   userId: string,
   proposalId: string,
-  opts: { edits?: Partial<ExtractedItemT>; courseId?: string | null } = {},
+  opts: {
+    edits?: Partial<ExtractedItemT>;
+    courseId?: string | null;
+    /** True when the confidence policy (not a user click) is accepting. */
+    autoAccepted?: boolean;
+  } = {},
 ): Promise<AcceptResult> {
   const proposal = await db.proposal.findFirst({ where: { id: proposalId, userId } });
   if (!proposal) return { ok: false, code: "not_found", message: "Proposal not found" };
@@ -43,7 +48,11 @@ export async function acceptProposal(
     // guard against a concurrent accept of the same proposal
     const { count } = await tx.proposal.updateMany({
       where: { id: proposal.id, status: "PENDING" },
-      data: { status: "ACCEPTED", resolvedAt: new Date() },
+      data: {
+        status: "ACCEPTED",
+        resolvedAt: new Date(),
+        autoAccepted: opts.autoAccepted ?? false,
+      },
     });
     if (count === 0)
       return { ok: false as const, code: "already_resolved" as const, message: "Proposal was already resolved" };
@@ -60,6 +69,7 @@ export async function acceptProposal(
           sourceId: proposal.sourceId,
         },
       });
+      await tx.proposal.update({ where: { id: proposal.id }, data: { acceptedItemId: task.id } });
       return { ok: true as const, kind: "task" as const, task };
     }
 
@@ -76,8 +86,80 @@ export async function acceptProposal(
         sourceId: proposal.sourceId,
       },
     });
+    await tx.proposal.update({ where: { id: proposal.id }, data: { acceptedItemId: event.id } });
     return { ok: true as const, kind: "event" as const, event };
   });
+}
+
+/**
+ * AUTO-ACCEPT POLICY (opt-in, Settings → Gmail). Not a new write path: it
+ * calls acceptProposal — the same gate — for EMAIL-source proposals whose
+ * confidence clears the bar. Everything below the bar stays PENDING for
+ * review, and every auto-accept is tagged + undoable (undoAutoAccept).
+ */
+export const AUTO_ACCEPT_MIN_CONFIDENCE = Number(
+  process.env.AUTO_ACCEPT_MIN_CONFIDENCE ?? 0.9,
+);
+
+export async function autoAcceptConfident(
+  sourceId: string,
+): Promise<{ accepted: number; considered: number }> {
+  const source = await db.source.findUnique({
+    where: { id: sourceId },
+    select: { id: true, userId: true, type: true },
+  });
+  // uploads are deliberate user actions with the review screen right there —
+  // the policy applies to background email ingestion only
+  if (!source || source.type !== "EMAIL") return { accepted: 0, considered: 0 };
+
+  const prefs = await db.gmailSyncState.findUnique({ where: { userId: source.userId } });
+  if (!prefs?.autoAccept) return { accepted: 0, considered: 0 };
+
+  const confident = await db.proposal.findMany({
+    where: {
+      userId: source.userId,
+      sourceId: source.id,
+      status: "PENDING",
+      confidence: { gte: AUTO_ACCEPT_MIN_CONFIDENCE },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let accepted = 0;
+  for (const p of confident) {
+    const result = await acceptProposal(source.userId, p.id, {
+      courseId: await guessCourseId(source.userId, p),
+      autoAccepted: true,
+    });
+    if (result.ok) accepted += 1;
+    // failures (e.g. event missing a start time) simply stay PENDING for review
+  }
+  return { accepted, considered: confident.length };
+}
+
+export async function undoAutoAccept(
+  userId: string,
+  proposalId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const proposal = await db.proposal.findFirst({
+    where: { id: proposalId, userId, status: "ACCEPTED", autoAccepted: true },
+  });
+  if (!proposal)
+    return { ok: false, message: "Not an auto-accepted proposal (or already undone)" };
+
+  await db.$transaction(async (tx) => {
+    if (proposal.acceptedItemId) {
+      // deleteMany: no-op if the user already deleted the item themselves
+      if (proposal.kind === "TASK")
+        await tx.task.deleteMany({ where: { id: proposal.acceptedItemId, userId } });
+      else await tx.event.deleteMany({ where: { id: proposal.acceptedItemId, userId } });
+    }
+    await tx.proposal.update({
+      where: { id: proposal.id },
+      data: { status: "PENDING", resolvedAt: null, autoAccepted: false, acceptedItemId: null },
+    });
+  });
+  return { ok: true };
 }
 
 export async function rejectProposal(

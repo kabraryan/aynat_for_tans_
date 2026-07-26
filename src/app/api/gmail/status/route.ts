@@ -14,5 +14,9 @@ export async function GET() {
   return NextResponse.json({
     connected,
     lastSyncAt: state?.lastSyncAt ?? null,
+    autoSync: state?.autoSync ?? false,
+    autoAccept: state?.autoAccept ?? false,
+    lastAutoSyncAt: state?.lastAutoSyncAt ?? null,
+    lastSyncError: state?.lastSyncError ?? null,
   });
 }

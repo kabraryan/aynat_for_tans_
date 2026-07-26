@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { extractFromSource } from "@/lib/extraction";
+import { autoAcceptConfident } from "@/lib/proposals";
 import { matchesSchoolEmail } from "@/lib/gmail/filter";
 import { getMessageBody, getMessageMeta, listMessageIds } from "@/lib/gmail/client";
 import { INITIAL_LOOKBACK_DAYS } from "@/config/gmail-filters";
@@ -80,11 +81,18 @@ export async function syncGmail(userId: string): Promise<SyncResult & { newSourc
   return { scanned: ids.length, matched, created, skipped: ids.length - matched, newSourceIds };
 }
 
-/** Sequentially extract the sources a sync created (called via after()). */
+/**
+ * Sequentially extract the sources a sync created (called via after() by the
+ * route, directly by the scheduler). After each extraction the auto-accept
+ * policy runs — a no-op unless the user opted in under Settings → Gmail.
+ */
 export async function extractSources(sourceIds: string[]): Promise<void> {
   for (const id of sourceIds) {
     try {
       await extractFromSource(id);
+      const { accepted, considered } = await autoAcceptConfident(id);
+      if (considered > 0)
+        console.log(`[gmail] source ${id}: auto-accepted ${accepted}/${considered} confident items`);
     } catch (err) {
       console.error(`extraction failed for email source ${id}:`, err);
     }

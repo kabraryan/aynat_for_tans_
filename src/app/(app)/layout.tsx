@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { Providers } from "@/components/providers";
 import { GlobalPasteHandler } from "@/components/upload/GlobalPasteHandler";
 import { ReminderWatcher } from "@/components/reminders/ReminderWatcher";
+import { AutoAddedBanner } from "@/components/review/AutoAddedBanner";
 
 const nav = [
   { href: "/", label: "Home" },
@@ -77,6 +78,7 @@ export default async function AppLayout({
         <Providers>
           <GlobalPasteHandler />
           <ReminderWatcher tz={tz} />
+          <AutoAddedBanner tz={tz} />
           {children}
         </Providers>
       </main>
